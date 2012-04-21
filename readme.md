@@ -1,6 +1,6 @@
 Interactive evolution of svg images using Raphael
 
-Todo
+Plan
 ----
 
 * load image

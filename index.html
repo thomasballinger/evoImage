@@ -3,20 +3,115 @@
 <head>
 </head>
 <body>
+    <h3>evoImage</h3>
+<img id=sourceImage src="obama.jpg"/>
 <div id=spot></div>
+<script src="raphael.js"></script>
 <script type="text/javascript">
+    window.onload = function(){
 
-    function Splotch = function(){
-        this.
+        var Splotch = function(maxWidth, maxHeight){
+            this.color = [0, 0, 0];
+            this.position = [100,100];
+            this.radius = 50;
+            this.zindex = 50;
+            this.alpha = 1;
+            this.maxPositions = [maxWidth, maxHeight];
+        };
+
+        Splotch.prototype = {
+            chanceToMutateColor : 0,
+            chanceToMutatePosition : 0,
+            chanceToMutateRadius : 0,
+            chanceToMutateZ : 0,
+            chanceToMutateA : 1,
+            rangeToMutateColor : 100,
+            rangeToMutateRadius : 40,
+            rangeToMutatePosition : 100,
+            render : function(p){
+                var numToHex = function(x){
+                    s = x.toString(16);
+                    if (s.length < 2){
+                        s = '0' + s
+                    }
+                    return s;
+                }
+                j = [{
+                    type:"circle", 
+                    cx: this.position[0], 
+                    cy: this.position[1], 
+                    r:this.radius,
+                    fill: "#"+numToHex(this.color[0]) + numToHex(this.color[1]) + numToHex(this.color[2]),
+                    'stroke': "#"+numToHex(this.color[0]) + numToHex(this.color[1]) + numToHex(this.color[2]),
+                    'fill-opacity':this.alpha,
+                    'stroke-opacity':this.alpha,
+                }];
+                console.log(j);
+                p.add(j);
+                //p.circle(this.position[0], this.position[1], this.radius);
+                console.log(this + " rendered on " + p);
+                console.log(this.position[0], this.position[1], this.radius);
+            },
+            mutate : function(){
+                x = Math.random();
+                if (x < this.chanceToMutateColor){
+                    this.mutateColor();
+                } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition){
+                    this.mutatePosition();
+                } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius){
+                    this.mutateRadius();
+                } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius + this.chanceToMutateZ){
+                    this.mutateZ();
+                } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius + this.chanceToMutateZ + this.chanceToMutateA){
+                    this.mutateA();
+                }
+            },
+            mutateColor : function(){
+                var i = Math.floor(Math.random()*3);
+                this.color[i] = (Math.floor(
+                                this.color[i] + (this.color[i]+(1 - 2*Math.random())*this.rangeToMutateColor)) + 256) % 256;
+                console.log('mutated color to '+ this.color);
+            },
+            mutatePosition : function(){
+                this.position[0] = Math.min(this.maxPositions[0], Math.max(0, Math.floor(
+                                this.position[0] + (this.position[0]+(1 - 2*Math.random())*this.rangeToMutatePosition))));
+                this.position[1] = Math.min(this.maxPositions[1], Math.max(0, Math.floor(
+                                this.position[1] + (this.position[0]+(1 - 2*Math.random())*this.rangeToMutatePosition))));
+                console.log('max positions:' + this.maxPositions)
+                console.log('mutated pos to ' + this.position[0] +' '+ this.position[1]);
+            },
+            mutateRadius : function(){
+                this.radius = Math.max(1, Math.min(400, this.radius + (1 - 2*Math.random())*this.rangeToMutateRadius));
+                console.log('mutated radius');
+            },
+            mutateZ : function(){
+                var z = Math.floor(Math.random()*100);
+                this.zindex = z;
+                console.log('mutated z-index');
+            },
+            mutateA : function(){
+                var a = Math.random();
+                this.alpha = a;
+                console.log('mutated alpha to '+this.alpha);
+            }
+        };
+        var fitness = function(canvas1, canvas2){
+
+        }
+        var srcImage = document.getElementById("sourceImage");
+        var spot = document.getElementById('spot');
+        var R = new Raphael("spot", srcImage.width, srcImage.height);
+        var splotches = [];
+        console.log(srcImage);
+        console.log(srcImage.width, srcImage.height);
+        splotches.push(new Splotch(srcImage.width, srcImage.height));
+        splotches[0].mutate();
+        splotches[0].render(R);
+        console.log(fitness(R.canvas.));
     }
 
-    Splotch.prototype = {
-        Splotch.stuff = 123;
-        
-    }
 
-    var spot = document.getElementById('spot')
-    finalImage = output_context.createImageData(input.width,input.height);
+
 </script>
 
 </body>
