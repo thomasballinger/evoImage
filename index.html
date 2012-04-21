@@ -4,11 +4,24 @@
 </head>
 <body>
     <h3>evoImage</h3>
-<img id=sourceImage src="obama.jpg"/>
-<div id=spot></div>
-<script src="raphael.js"></script>
+<img id=sourceImage src="obama.jpg" hidden=True />
+<canvas id="inCanvas" width="200" height="200">
+</canvas>
+<canvas id="outCanvas" width="200" height="200">
+</canvas>
+<button id='button'>doit</button>
+<script type="text/javascript" src="rgbcolor.js"></script> 
+<script type="text/javascript" src="canvg.js"></script> 
 <script type="text/javascript">
     window.onload = function(){
+
+        var numToHex = function(x){
+            s = x.toString(16);
+            if (s.length < 2){
+                s = '0' + s
+            }
+            return s;
+        }
 
         var Splotch = function(maxWidth, maxHeight){
             this.color = [0, 0, 0];
@@ -20,22 +33,29 @@
         };
 
         Splotch.prototype = {
-            chanceToMutateColor : 0,
-            chanceToMutatePosition : 0,
-            chanceToMutateRadius : 0,
+            chanceToMutateColor : .3,
+            chanceToMutatePosition : .3,
+            chanceToMutateRadius : .4,
             chanceToMutateZ : 0,
-            chanceToMutateA : 1,
+            chanceToMutateA : 0,
             rangeToMutateColor : 100,
             rangeToMutateRadius : 40,
             rangeToMutatePosition : 100,
-            render : function(p){
-                var numToHex = function(x){
-                    s = x.toString(16);
-                    if (s.length < 2){
-                        s = '0' + s
-                    }
-                    return s;
-                }
+            setOld : function(){
+                this.oldColor = [this.color[0], this.color[1], this.color[2]];
+                this.oldPosition = [this.position[0], this.position[1]];
+                this.oldRadius = this.radius;
+                this.oldZindex = this.zindex;
+                this.oldAlpha = this.alpha;
+            },
+            revert : function(){
+                this.color = this.oldColor;
+                this.position = this.oldPosition;
+                this.radius = this.oldRadius;
+                this.zindex = this.oldZindex;
+                this.alpha = this.oldAlpha;
+            },
+            jsonRender : function(p){
                 j = [{
                     type:"circle", 
                     cx: this.position[0], 
@@ -46,11 +66,22 @@
                     'fill-opacity':this.alpha,
                     'stroke-opacity':this.alpha,
                 }];
-                console.log(j);
+                //console.log(j);
                 p.add(j);
                 //p.circle(this.position[0], this.position[1], this.radius);
-                console.log(this + " rendered on " + p);
-                console.log(this.position[0], this.position[1], this.radius);
+                //console.log(this + " rendered on " + p);
+                //console.log(this.position[0], this.position[1], this.radius);
+            },
+            xmlRender : function(){
+                var s = '<circle cx="'+this.position[0]+
+                    '" cy="'+this.position[1]+
+                    '" r="'+this.radius+
+                    '" fill="' + "#"+numToHex(this.color[0]) + numToHex(this.color[1]) + numToHex(this.color[2]) +
+                    '" stroke="' + "#"+numToHex(this.color[0]) + numToHex(this.color[1]) + numToHex(this.color[2]) +
+                    '" fill-opacity="'+this.alpha +
+                    '" stroke-opacity="'+this.alpha +
+                    '"/>';
+                return s;
             },
             mutate : function(){
                 x = Math.random();
@@ -67,12 +98,14 @@
                 }
             },
             mutateColor : function(){
+                this.setOld();
                 var i = Math.floor(Math.random()*3);
                 this.color[i] = (Math.floor(
                                 this.color[i] + (this.color[i]+(1 - 2*Math.random())*this.rangeToMutateColor)) + 256) % 256;
                 console.log('mutated color to '+ this.color);
             },
             mutatePosition : function(){
+                this.setOld();
                 this.position[0] = Math.min(this.maxPositions[0], Math.max(0, Math.floor(
                                 this.position[0] + (this.position[0]+(1 - 2*Math.random())*this.rangeToMutatePosition))));
                 this.position[1] = Math.min(this.maxPositions[1], Math.max(0, Math.floor(
@@ -81,33 +114,78 @@
                 console.log('mutated pos to ' + this.position[0] +' '+ this.position[1]);
             },
             mutateRadius : function(){
+                this.setOld();
                 this.radius = Math.max(1, Math.min(400, this.radius + (1 - 2*Math.random())*this.rangeToMutateRadius));
-                console.log('mutated radius');
+                console.log('mutated radius to '+this.radius);
             },
             mutateZ : function(){
+                this.setOld();
                 var z = Math.floor(Math.random()*100);
                 this.zindex = z;
                 console.log('mutated z-index');
             },
             mutateA : function(){
+                this.setOld();
                 var a = Math.random();
                 this.alpha = a;
                 console.log('mutated alpha to '+this.alpha);
             }
         };
-        var fitness = function(canvas1, canvas2){
-
+        var fitness = function(canvasContext1, canvasContext2){
+            data1 = canvasContext1.getImageData(0, 0, 200, 200).data;
+            data2 = canvasContext2.getImageData(0, 0, 200, 200).data;
+            sum = 0;
+            for (var i = 0; i<data1.length; i++){
+                sum = sum + Math.abs(data1[i] - data2[i])
+            }
+            return sum;
         }
         var srcImage = document.getElementById("sourceImage");
         var spot = document.getElementById('spot');
-        var R = new Raphael("spot", srcImage.width, srcImage.height);
+        var inCanvas = document.getElementById('inCanvas');
+        var outCanvas = document.getElementById('outCanvas');
+        inCtx = inCanvas.getContext('2d');
+        outCtx = outCanvas.getContext('2d');
+        inCtx.drawImage(sourceImage, 0, 0);
         var splotches = [];
-        console.log(srcImage);
-        console.log(srcImage.width, srcImage.height);
         splotches.push(new Splotch(srcImage.width, srcImage.height));
-        splotches[0].mutate();
-        splotches[0].render(R);
-        console.log(fitness(R.canvas.));
+
+        originalFitness = fitness(inCtx, outCtx);
+        var counter = 0;
+        var lowest = 1000000000;
+        f = fitness(inCtx, outCtx);
+        lowest = Math.min(f, lowest);
+
+        var tryMutation = function(){
+            splotches[counter].mutate()
+            outCtx.clearRect(0, 0, 300,300);
+            var s = ''
+            for (var i=0; i<splotches.length; i++){
+                s += splotches[i].xmlRender();
+            }
+            console.log(s);
+            outCtx.drawSvg(s);
+            f = fitness(inCtx, outCtx);
+            console.log(f);
+            if(f > lowest){
+                console.log(f, 'reverting');
+                splotches[counter].revert();
+                outCtx.clearRect(0, 0, 300,300);
+                var s = ''
+                for (var i=0; i<splotches.length; i++){
+                    s += splotches[i].xmlRender();
+                }
+                console.log(s);
+                outCtx.drawSvg(s);
+            } else {
+                console.log('keeping!');
+                lowest = Math.min(f, lowest);
+            }
+            counter = (counter + 1) % splotches.length
+        }
+        //console.log(s);
+        b = document.getElementById('button');
+        b.addEventListener('click', tryMutation);
     }
 
 
