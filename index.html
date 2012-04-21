@@ -9,7 +9,8 @@
 </canvas>
 <canvas id="outCanvas" width="200" height="200">
 </canvas>
-<button id='button'>doit</button>
+<button id='button'>mutate</button>
+<button2 id='button'>addCircle</button>
 <script type="text/javascript" src="rgbcolor.js"></script> 
 <script type="text/javascript" src="canvg.js"></script> 
 <script type="text/javascript">
@@ -186,6 +187,11 @@
         //console.log(s);
         b = document.getElementById('button');
         b.addEventListener('click', tryMutation);
+        b2 = document.getElementById('button2');
+        b2.addEventListener('click', function(){
+        splotches.push(new Splotch(srcImage.width, srcImage.height));
+
+                });
     }
 
 
