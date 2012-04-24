@@ -4,17 +4,48 @@
 </head>
 <body>
     <h3>evoImage</h3>
-<img id=sourceImage src="obama.jpg" hidden=True />
-<canvas id="inCanvas" width="200" height="200">
+<img id=sourceImage src="littlegirl.jpg" hidden=True />
+<canvas id="inCanvas" width="150" height="150">
 </canvas>
-<canvas id="outCanvas" width="200" height="200">
+<div id="approxesDiv">
+
+</div>
+<canvas id="plotCanvas" width="2000" height="200">
 </canvas>
-<button id='button'>mutate</button>
-<button2 id='button'>addCircle</button>
+<span>
+<button id='addApprox'>New Organism</button>
+</span>
+<button id='sex'>Sexually Reproduce</button>
+</span>
+<div id='palette'></span>
 <script type="text/javascript" src="rgbcolor.js"></script> 
 <script type="text/javascript" src="canvg.js"></script> 
+<script type="text/javascript" src="http://figue.googlecode.com/svn/trunk/figue.js"></script> 
 <script type="text/javascript">
     window.onload = function(){
+        var getPalette = function(imageData, numColors){
+            var data = [];
+            for (var i=0; i<imageData.length/4; i=i+4){
+                data.push([imageData[i], imageData[i+1], imageData[i+2]]);
+            }
+            var clusters = figue.kmeans(numColors, data);
+            //console.log('using palette:', clusters.centroids);
+            var display = document.getElementById('palette');
+            palette = [];
+            for (var i=0; i<numColors; i++){
+                palette.push([Math.floor(clusters.centroids[i][0]),
+                        Math.floor(clusters.centroids[i][1]),
+                        Math.floor(clusters.centroids[i][2])
+                        ]);
+                var c = document.createElement('h3');
+                c.bgcolor = '#'+numToHex(palette[i][0])+numToHex(palette[i][1])+numToHex(palette[i][2]);
+                c.style.color = '#'+numToHex(palette[i][0])+numToHex(palette[i][1])+numToHex(palette[i][2]);
+                c.innerHTML = c.bgcolor;
+                c.id = 'paletteColor'+i;
+                display.appendChild(c);
+            }
+            return palette;
+        }
 
         var numToHex = function(x){
             s = x.toString(16);
@@ -22,27 +53,163 @@
                 s = '0' + s
             }
             return s;
+        };
+
+        var Approx = function(label, whereToInsert, inputCanvas){
+            var self = this;
+            this.splotches = [];
+            this.div = document.createElement('div');
+
+            this.label = document.createElement('h3');
+            this.label.innerHTML = label;
+            this.div.appendChild(this.label);
+
+            this.numCircles = document.createElement('h3');
+            this.numCircles.innerHTML = 'circles: -';
+            this.div.appendChild(this.numCircles);
+
+            this.fitness = document.createElement('h3');
+            this.fitness.innerHTML = 'fitness: -';
+            this.div.appendChild(this.fitness);
+
+            this.graphCanvas = document.createElement('canvas');
+            this.graphCanvas.setAttribute('width', 150);
+            this.graphCanvas.setAttribute('height', 100);
+            this.div.appendChild(this.graphCanvas);
+
+            this.iterImproveButton = document.createElement('button');
+            this.iterImproveButton.innerHTML = 'iteratively improve';
+            this.iterImproveButton.addEventListener('click', function(){self.circlify(200)});
+            this.div.appendChild(this.iterImproveButton);
+
+            this.canvas = document.createElement('canvas');
+            this.canvas.setAttribute('width', inputCanvas.width);
+            this.canvas.setAttribute('height', inputCanvas.height);
+            this.div.appendChild(this.canvas);
+
+            whereToInsert.appendChild(this.div);
+            this.inputCanvas = inputCanvas;
+            this.inputCtx = inputCanvas.getContext('2d');
+            this.ctx = this.canvas.getContext('2d');
+            this.graphCtx = this.graphCanvas.getContext('2d');
+            this.worst = this.lowest = this.getFitness();
+            this.count = 0;
+        };
+
+        Approx.prototype = {
+            getFitness : function(){
+                data1 = this.inputCtx.getImageData(0, 0, this.inputCanvas.width, this.inputCanvas.height).data;
+                data2 = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+                sum = 0;
+                for (var i = 0; i<data1.length; i++){
+                    sum = sum + Math.abs(data1[i] - data2[i])
+                }
+                return sum;
+            },
+            updateScreen : function(){
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                // TODO make z-ordering work
+                //var sorted = [];
+                var s = '<svg>';
+                for (var j=0; j<10; j++){
+                    for (var i=0; i<this.splotches.length; i++){
+                        if (this.splotches[i].zindex == j){
+                            s += this.splotches[i].xmlRender();
+                        }
+                    }
+                }
+                s+= '</svg>';
+                this.ctx.drawSvg(s);
+                f = this.getFitness();
+                var x = this.count/20;
+                var y = f / this.worst * 100;
+                this.count++;
+                this.graphCtx.fillRect(x, y, 1, 1);
+                this.fitness.innerHTML = 'fitness: '+Math.floor(100 - f/this.worst*100)+'%';
+                this.numCircles.innerHTML = 'circles: '+this.splotches.length;
+                return f;
+            },
+            tryMutation : function(splotchIndex){
+                this.splotches[splotchIndex].mutate(2);
+                f = this.updateScreen();
+                if(f > this.lowest){
+                    this.splotches[splotchIndex].revert();
+                    this.updateScreen();
+                } else {
+                    this.lowest = Math.min(f, this.lowest);
+                }
+            },
+            cull : function(){
+                for (var i = 0; i < this.splotches.length;){
+                    f1 = this.updateScreen();
+                    var oldSplotches = this.splotches.slice(0);
+                    this.splotches = this.splotches.slice(0,i).concat(this.splotches.slice(i+1));
+                    f2 = this.updateScreen();
+                    if (f1 < f2 + 20){
+                        i++;
+                        this.splotches = oldSplotches;
+                    } else {
+                        this.splotches
+                        console.log('circle culled - ',this.splotches.length,'remaining');
+                    }
+                }
+            },
+            combine : function(){
+                // todo: combine similar circles by combining their colors in
+                // transparent modes
+                for (var i = 0; i < this.splotches.length;){
+                    for (var j = 0; j < this.splotches.length;){
+                    }
+                }
+            },
+            addCircle : function(){
+                s = new Splotch(this.inputCanvas.width, this.inputCanvas.height);
+                this.splotches.push(s);
+                this.updateScreen();
+            },
+            circlify : function(n){
+                for (var i=0; i<n; i++){
+                    if (Math.random() < .02){
+                        this.addCircle();
+                    }
+                    if (Math.random() < .1){
+                        this.cull();
+                    }
+                    if (this.splotches.length == 0){
+                        this.addCircle();
+                    }
+                    this.tryMutation(Math.floor(Math.random()*this.splotches.length));
+                }
+            },
         }
 
-        var Splotch = function(maxWidth, maxHeight){
+        var Splotch = function(width, height, palette){
             this.color = [0, 0, 0];
-            this.position = [100,100];
-            this.radius = 50;
-            this.zindex = 50;
-            this.alpha = 1;
-            this.maxPositions = [maxWidth, maxHeight];
+            this.position = [width/2,height/2];
+            this.radius = 10;
+            this.zindex = 5;
+            this.alpha = .5;
+            this.minRadius = 1;
+            this.maxRadius = Math.floor(Math.min(width, height) / 1.5);
+            this.maxPositions = [width+this.maxRadius, height+this.maxRadius];
+            this.minPositions = [-this.maxRadius, -this.maxRadius];
+            this.chanceToMutateColor = .2;
+            this.chanceToMutatePosition = .3;
+            this.chanceToMutateRadius = .2;
+            this.chanceToMutateZ = .15;
+            this.chanceToMutateA = .15;
+            this.rangeToMutateColor = 100;
+            this.rangeToMutateRadius = 30;
+            this.rangeToMutatePosition = 20;
+            if (palette){
+                this.usePaletteColors = true;
+                this.palette = palette;
+            }
         };
 
         Splotch.prototype = {
-            chanceToMutateColor : .3,
-            chanceToMutatePosition : .3,
-            chanceToMutateRadius : .4,
-            chanceToMutateZ : 0,
-            chanceToMutateA : 0,
-            rangeToMutateColor : 100,
-            rangeToMutateRadius : 40,
-            rangeToMutatePosition : 100,
             setOld : function(){
+                if (this.color === undefined){debugger}
                 this.oldColor = [this.color[0], this.color[1], this.color[2]];
                 this.oldPosition = [this.position[0], this.position[1]];
                 this.oldRadius = this.radius;
@@ -84,114 +251,92 @@
                     '"/>';
                 return s;
             },
-            mutate : function(){
-                x = Math.random();
-                if (x < this.chanceToMutateColor){
-                    this.mutateColor();
-                } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition){
-                    this.mutatePosition();
-                } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius){
-                    this.mutateRadius();
-                } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius + this.chanceToMutateZ){
-                    this.mutateZ();
-                } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius + this.chanceToMutateZ + this.chanceToMutateA){
-                    this.mutateA();
+            mutate : function(n){
+                this.setOld();
+                if (n === undefined){n = 1}
+                for (var i=0; i<n; i++){
+                    x = Math.random();
+                    if (x < this.chanceToMutateColor){
+                        this.mutateColor();
+                    } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition){
+                        this.mutatePosition();
+                    } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius){
+                        this.mutateRadius();
+                    } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius + this.chanceToMutateZ){
+                        this.mutateZ();
+                    } else if ( x < this.chanceToMutateColor + this.chanceToMutatePosition + this.chanceToMutateRadius + this.chanceToMutateZ + this.chanceToMutateA){
+                        this.mutateA();
+                    }
                 }
             },
             mutateColor : function(){
-                this.setOld();
-                var i = Math.floor(Math.random()*3);
-                this.color[i] = (Math.floor(
-                                this.color[i] + (this.color[i]+(1 - 2*Math.random())*this.rangeToMutateColor)) + 256) % 256;
-                console.log('mutated color to '+ this.color);
+                if (this.usePaletteColors){
+                    var paletteColor = this.palette[Math.floor(Math.random()*this.palette.length)];
+                    this.color = [paletteColor[0], paletteColor[1], paletteColor[2]];
+                } else {
+                    for (var i=0; i<3; i++){
+                        this.color[i] = Math.floor(Math.random()*256);
+                //        this.color[i] = (Math.floor(
+                //            this.color[i] + (this.color[i]+(1 - 2*Math.random())*this.rangeToMutateColor)) + 256) % 256;
+                    }
+                }
+                //console.log('mutated color to '+ this.color);
             },
             mutatePosition : function(){
-                this.setOld();
-                this.position[0] = Math.min(this.maxPositions[0], Math.max(0, Math.floor(
-                                this.position[0] + (this.position[0]+(1 - 2*Math.random())*this.rangeToMutatePosition))));
-                this.position[1] = Math.min(this.maxPositions[1], Math.max(0, Math.floor(
-                                this.position[1] + (this.position[0]+(1 - 2*Math.random())*this.rangeToMutatePosition))));
-                console.log('max positions:' + this.maxPositions)
-                console.log('mutated pos to ' + this.position[0] +' '+ this.position[1]);
+                this.position[0] = Math.min(this.maxPositions[0], Math.max(this.minPositions[0], Math.floor(
+                                this.position[0] + ((1 - 2*Math.random())*this.rangeToMutatePosition))));
+                this.position[1] = Math.min(this.maxPositions[1], Math.max(this.minPositions[1], Math.floor(
+                                this.position[1] + ((1 - 2*Math.random())*this.rangeToMutatePosition))));
+                //console.log('max positions:' + this.maxPositions)
+                //console.log('mutated pos to ' + this.position[0] +' '+ this.position[1]);
             },
             mutateRadius : function(){
-                this.setOld();
-                this.radius = Math.max(1, Math.min(400, this.radius + (1 - 2*Math.random())*this.rangeToMutateRadius));
-                console.log('mutated radius to '+this.radius);
+                this.radius = Math.max(this.minRadius, Math.min(this.maxRadius, this.radius + (1 - 2*Math.random())*this.rangeToMutateRadius));
+                //console.log('mutated radius to '+this.radius);
             },
             mutateZ : function(){
-                this.setOld();
-                var z = Math.floor(Math.random()*100);
+                var z = Math.floor(Math.random()*10);
                 this.zindex = z;
-                console.log('mutated z-index');
+                //console.log('mutated z-index');
             },
             mutateA : function(){
-                this.setOld();
                 var a = Math.random();
                 this.alpha = a;
-                console.log('mutated alpha to '+this.alpha);
+                //console.log('mutated alpha to '+this.alpha);
             }
         };
-        var fitness = function(canvasContext1, canvasContext2){
-            data1 = canvasContext1.getImageData(0, 0, 200, 200).data;
-            data2 = canvasContext2.getImageData(0, 0, 200, 200).data;
-            sum = 0;
-            for (var i = 0; i<data1.length; i++){
-                sum = sum + Math.abs(data1[i] - data2[i])
+        var sexuallyReproduce = function(){
+            var numDescendants = 10;
+            var splotches = [];
+            for (var i = 0; i < approxes.length; i++){
+                splotches = splotches.concat(approxes.splotches);
             }
-            return sum;
-        }
-        var srcImage = document.getElementById("sourceImage");
-        var spot = document.getElementById('spot');
-        var inCanvas = document.getElementById('inCanvas');
-        var outCanvas = document.getElementById('outCanvas');
-        inCtx = inCanvas.getContext('2d');
-        outCtx = outCanvas.getContext('2d');
-        inCtx.drawImage(sourceImage, 0, 0);
-        var splotches = [];
-        splotches.push(new Splotch(srcImage.width, srcImage.height));
+            var aveCircles = Math.ceil(splotches.length / approxes.length);
+            for (var i = 0; i < numDescendants; i++){
 
-        originalFitness = fitness(inCtx, outCtx);
+            }
+        };
         var counter = 0;
-        var lowest = 1000000000;
-        f = fitness(inCtx, outCtx);
-        lowest = Math.min(f, lowest);
+        var srcImage = document.getElementById("sourceImage");
+        var inCanvas = document.getElementById('inCanvas');
+        var plotCanvas = document.getElementById('plotCanvas');
+        var fitnessDisplay = document.getElementById('fitnessDisplay');
+        var approxesDiv = document.getElementById('approxesDiv');
+        inCtx = inCanvas.getContext('2d');
+        inCtx.drawImage(sourceImage, 0, 0);
+        var palette = getPalette(inCtx.getImageData(0, 0, 200, 200).data, 8);
 
-        var tryMutation = function(){
-            splotches[counter].mutate()
-            outCtx.clearRect(0, 0, 300,300);
-            var s = ''
-            for (var i=0; i<splotches.length; i++){
-                s += splotches[i].xmlRender();
-            }
-            console.log(s);
-            outCtx.drawSvg(s);
-            f = fitness(inCtx, outCtx);
-            console.log(f);
-            if(f > lowest){
-                console.log(f, 'reverting');
-                splotches[counter].revert();
-                outCtx.clearRect(0, 0, 300,300);
-                var s = ''
-                for (var i=0; i<splotches.length; i++){
-                    s += splotches[i].xmlRender();
-                }
-                console.log(s);
-                outCtx.drawSvg(s);
-            } else {
-                console.log('keeping!');
-                lowest = Math.min(f, lowest);
-            }
-            counter = (counter + 1) % splotches.length
-        }
-        //console.log(s);
-        b = document.getElementById('button');
-        b.addEventListener('click', tryMutation);
-        b2 = document.getElementById('button2');
-        b2.addEventListener('click', function(){
-        splotches.push(new Splotch(srcImage.width, srcImage.height));
+        var approxes = [];
 
-                });
+        addApproxButton = document.getElementById('addApprox');
+        addApproxButton.addEventListener('click', function(){
+            approxes.push(new Approx('organism '+counter++, approxesDiv, inCanvas))
+        });
+        sexButton = document.getElementById('sex');
+        sexButton.addEventListener('click', function(){
+            sexuallyReproduce();
+            ;
+        });
     }
 
 
