@@ -4,8 +4,8 @@
 </head>
 <body>
     <h3>evoImage</h3>
-<img id=sourceImage src="littlegirl.jpg" hidden=True />
-<canvas id="inCanvas" width="150" height="150">
+<img id=sourceImage src="flowers.jpg" hidden=True />
+<canvas id="inCanvas" width="200" height="200">
 </canvas>
 <div id="approxesDiv">
 
@@ -82,6 +82,11 @@
             this.iterImproveButton.addEventListener('click', function(){self.circlify(200)});
             this.div.appendChild(this.iterImproveButton);
 
+            this.costCanvas = document.createElement('canvas');
+            this.costCanvas.setAttribute('width', inputCanvas.width);
+            this.costCanvas.setAttribute('height', inputCanvas.height);
+            this.div.appendChild(this.costCanvas);
+
             this.canvas = document.createElement('canvas');
             this.canvas.setAttribute('width', inputCanvas.width);
             this.canvas.setAttribute('height', inputCanvas.height);
@@ -91,6 +96,7 @@
             this.inputCanvas = inputCanvas;
             this.inputCtx = inputCanvas.getContext('2d');
             this.ctx = this.canvas.getContext('2d');
+            this.costCtx = this.costCanvas.getContext('2d');
             this.graphCtx = this.graphCanvas.getContext('2d');
             this.worst = this.lowest = this.getFitness();
             this.count = 0;
@@ -98,13 +104,24 @@
 
         Approx.prototype = {
             getFitness : function(){
-                data1 = this.inputCtx.getImageData(0, 0, this.inputCanvas.width, this.inputCanvas.height).data;
-                data2 = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
-                sum = 0;
-                for (var i = 0; i<data1.length; i++){
-                    sum = sum + Math.abs(data1[i] - data2[i])
+                var data1 = this.inputCtx.getImageData(0, 0, this.inputCanvas.width, this.inputCanvas.height).data;
+                var data2 = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+                var costMap = this.costCtx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                var totalsum = 0;
+                for (var i = 0; i<data1.length; i = i + 4){
+                    var sum = 0;
+                    sum = sum + Math.pow(data1[i] - data2[i], 2);
+                    sum = sum + Math.pow(data1[i+1] - data2[i+1], 2);
+                    sum = sum + Math.pow(data1[i+2] - data2[i+2], 2);
+                    totalsum += sum;
+                    diff = Math.floor(Math.max(0, Math.min(255, sum/200)));
+                    costMap.data[i] = Math.floor(diff);
+                    costMap.data[i+1] = Math.floor(diff);
+                    costMap.data[i+2] = Math.floor(diff);
+                    costMap.data[i+3] = 255;
                 }
-                return sum;
+                this.costCtx.putImageData(costMap, 0, 0);
+                return totalsum;
             },
             updateScreen : function(){
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -181,7 +198,9 @@
                     this.tryMutation(Math.floor(Math.random()*this.splotches.length));
                 }
             },
-        }
+        };
+
+        var normal = function(){return (Math.random() + Math.random() + Math.random() + Math.random() - 2) / 2};
 
         var Splotch = function(width, height, palette){
             this.color = [0, 0, 0];
@@ -275,15 +294,13 @@
                     this.color = [paletteColor[0], paletteColor[1], paletteColor[2]];
                 } else {
                     for (var i=0; i<3; i++){
-                        this.color[i] = Math.floor(Math.random()*256);
-                //        this.color[i] = (Math.floor(
-                //            this.color[i] + (this.color[i]+(1 - 2*Math.random())*this.rangeToMutateColor)) + 256) % 256;
+                        this.color[i] = (Math.floor(
+                            this.color[i] + (this.color[i]+normal()*this.rangeToMutateColor)) + 256) % 256;
                     }
                 }
                 //console.log('mutated color to '+ this.color);
             },
             mutatePosition : function(){
-                var normal = function(){return (Math.random() + Math.random() + Math.random() + Math.random() - 2) / 2}
                 this.position[0] = Math.min(this.maxPositions[0], Math.max(this.minPositions[0], Math.floor(
                                 this.position[0] + (normal()*this.rangeToMutatePosition))));
                 this.position[1] = Math.min(this.maxPositions[1], Math.max(this.minPositions[1], Math.floor(
