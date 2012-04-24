@@ -1,0 +1,11 @@
+body {
+    color: purple; 
+    background-color: #e9e2ee;
+}
+h3 {
+    font-family: Georgia, "Times New Roman",
+        Times, serif;
+    }
+div {
+    border: 3px solid #101010;
+}
