@@ -283,10 +283,11 @@
                 //console.log('mutated color to '+ this.color);
             },
             mutatePosition : function(){
+                var normal = function(){return (Math.random() + Math.random() + Math.random() + Math.random() - 2) / 2}
                 this.position[0] = Math.min(this.maxPositions[0], Math.max(this.minPositions[0], Math.floor(
-                                this.position[0] + ((1 - 2*Math.random())*this.rangeToMutatePosition))));
+                                this.position[0] + (normal()*this.rangeToMutatePosition))));
                 this.position[1] = Math.min(this.maxPositions[1], Math.max(this.minPositions[1], Math.floor(
-                                this.position[1] + ((1 - 2*Math.random())*this.rangeToMutatePosition))));
+                                this.position[1] + (normal()*this.rangeToMutatePosition))));
                 //console.log('max positions:' + this.maxPositions)
                 //console.log('mutated pos to ' + this.position[0] +' '+ this.position[1]);
             },
