@@ -8,6 +8,7 @@ ToDo
 - Sexual Reproduction via swpap
 - Consider compacting z-indices if possible
 - Make cost function weighing of extra circles explicit
+- Do palette determination in a better color space
 
 
 Ideas
