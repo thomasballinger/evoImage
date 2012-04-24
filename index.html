@@ -5,7 +5,7 @@
 <body>
     <h3>evoImage</h3>
 <img id=sourceImage src="flowers.jpg" hidden=True />
-<canvas id="inCanvas" width="200" height="200">
+<canvas id="inCanvas" width="100" height="100">
 </canvas>
 <div id="approxesDiv">
 
@@ -59,43 +59,51 @@
             var self = this;
             this.splotches = [];
             this.div = document.createElement('div');
+            this.div.className = "approx";
 
             this.label = document.createElement('h3');
             this.label.innerHTML = label;
+            this.label.className = 'label';
             this.div.appendChild(this.label);
 
             this.numCircles = document.createElement('h3');
             this.numCircles.innerHTML = 'circles: -';
+            this.numCircles.className = "numCircles";
             this.div.appendChild(this.numCircles);
 
             this.fitness = document.createElement('h3');
             this.fitness.innerHTML = 'fitness: -';
+            this.fitness.className = "fitness";
             this.div.appendChild(this.fitness);
 
             this.graphCanvas = document.createElement('canvas');
             this.graphCanvas.setAttribute('width', 150);
             this.graphCanvas.setAttribute('height', 100);
+            this.graphCanvas.className = "graphCanvas";
             this.div.appendChild(this.graphCanvas);
 
             this.iterImproveButton = document.createElement('button');
             this.iterImproveButton.innerHTML = 'iteratively improve';
-            this.iterImproveButton.addEventListener('click', function(){self.circlify(200)});
+            this.iterImproveButton.addEventListener('click', function(){self.circlify(50)});
+            this.iterImproveButton.className = "iterImproveButton";
             this.div.appendChild(this.iterImproveButton);
 
             this.costCanvas = document.createElement('canvas');
             this.costCanvas.setAttribute('width', inputCanvas.width);
             this.costCanvas.setAttribute('height', inputCanvas.height);
+            this.costCanvas.className = "costCanvas";
             this.div.appendChild(this.costCanvas);
 
-            this.canvas = document.createElement('canvas');
-            this.canvas.setAttribute('width', inputCanvas.width);
-            this.canvas.setAttribute('height', inputCanvas.height);
-            this.div.appendChild(this.canvas);
+            this.displayCanvas = document.createElement('canvas');
+            this.displayCanvas.setAttribute('width', inputCanvas.width);
+            this.displayCanvas.setAttribute('height', inputCanvas.height);
+            this.displayCanvas.className = "displayCanvas";
+            this.div.appendChild(this.displayCanvas);
 
             whereToInsert.appendChild(this.div);
             this.inputCanvas = inputCanvas;
             this.inputCtx = inputCanvas.getContext('2d');
-            this.ctx = this.canvas.getContext('2d');
+            this.ctx = this.displayCanvas.getContext('2d');
             this.costCtx = this.costCanvas.getContext('2d');
             this.graphCtx = this.graphCanvas.getContext('2d');
             this.worst = this.lowest = this.getFitness();
@@ -105,8 +113,8 @@
         Approx.prototype = {
             getFitness : function(){
                 var data1 = this.inputCtx.getImageData(0, 0, this.inputCanvas.width, this.inputCanvas.height).data;
-                var data2 = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
-                var costMap = this.costCtx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                var data2 = this.ctx.getImageData(0, 0, this.displayCanvas.width, this.displayCanvas.height).data;
+                var costMap = this.costCtx.getImageData(0, 0, this.displayCanvas.width, this.displayCanvas.height);
                 var totalsum = 0;
                 for (var i = 0; i<data1.length; i = i + 4){
                     var sum = 0;
@@ -124,7 +132,7 @@
                 return totalsum;
             },
             updateScreen : function(){
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.clearRect(0, 0, this.displayCanvas.width, this.displayCanvas.height);
                 // TODO make z-ordering work
                 //var sorted = [];
                 var s = '<svg>';
@@ -147,7 +155,7 @@
                 return f;
             },
             tryMutation : function(splotchIndex){
-                this.splotches[splotchIndex].mutate(2);
+                this.splotches[splotchIndex].mutate(1);
                 f = this.updateScreen();
                 if(f > this.lowest){
                     this.splotches[splotchIndex].revert();
@@ -162,12 +170,11 @@
                     var oldSplotches = this.splotches.slice(0);
                     this.splotches = this.splotches.slice(0,i).concat(this.splotches.slice(i+1));
                     f2 = this.updateScreen();
-                    if (f1 < f2 + 20){
+                    if (f1 < f2 - 20){
                         i++;
                         this.splotches = oldSplotches;
                     } else {
-                        this.splotches
-                        console.log('circle culled - ',this.splotches.length,'remaining');
+                        ;
                     }
                 }
             },
@@ -180,49 +187,62 @@
                 }
             },
             addCircle : function(){
-                s = new Splotch(this.inputCanvas.width, this.inputCanvas.height);
+                s = new Splotch(this.inputCanvas.width, this.inputCanvas.height, palette);
                 this.splotches.push(s);
-                this.updateScreen();
+                var f = this.updateScreen();
+                if (f < this.lowest){
+                    //keep
+                } else {
+                    this.splotches = this.splotches.slice(0,this.splotches.length-1);
+                }
             },
             circlify : function(n){
                 for (var i=0; i<n; i++){
-                    if (Math.random() < .02){
+                    if (Math.random() < 1){
                         this.addCircle();
-                    }
-                    if (Math.random() < .1){
-                        this.cull();
                     }
                     if (this.splotches.length == 0){
                         this.addCircle();
                     }
                     this.tryMutation(Math.floor(Math.random()*this.splotches.length));
                 }
+                this.cull();
             },
         };
 
         var normal = function(){return (Math.random() + Math.random() + Math.random() + Math.random() - 2) / 2};
 
         var Splotch = function(width, height, palette){
-            this.color = [0, 0, 0];
-            this.position = [width/2,height/2];
-            this.radius = 10;
-            this.zindex = 5;
-            this.alpha = .5;
             this.minRadius = 1;
             this.maxRadius = Math.floor(Math.min(width, height) / 1.5);
             this.maxPositions = [width+this.maxRadius, height+this.maxRadius];
             this.minPositions = [-this.maxRadius, -this.maxRadius];
+            this.position = [
+                Math.floor(Math.random()*(this.maxPositions[0] - this.minPositions[0]) + this.minPositions[0]),
+                Math.floor(Math.random()*(this.maxPositions[1] - this.minPositions[1]) + this.minPositions[1]),
+                ]
+            this.radius = Math.random()*(this.maxRadius - this.minRadius)+this.minRadius;
+            this.zindex = Math.floor(Math.random()*10);
+            this.alpha = 1;
             this.chanceToMutateColor = .2;
             this.chanceToMutatePosition = .3;
             this.chanceToMutateRadius = .2;
-            this.chanceToMutateZ = .15;
-            this.chanceToMutateA = .15;
+            this.chanceToMutateZ = .3;
+            this.chanceToMutateA = 0;
+
             this.rangeToMutateColor = 100;
+            this.color = [
+                Math.floor(Math.random()*256),
+                Math.floor(Math.random()*256),
+                Math.floor(Math.random()*256),
+                ]
+
             this.rangeToMutateRadius = 30;
             this.rangeToMutatePosition = 20;
             if (palette){
                 this.usePaletteColors = true;
                 this.palette = palette;
+                this.color = palette[Math.floor(Math.random()*palette.length)];
             }
         };
 
@@ -342,7 +362,7 @@
         var approxesDiv = document.getElementById('approxesDiv');
         inCtx = inCanvas.getContext('2d');
         inCtx.drawImage(sourceImage, 0, 0);
-        var palette = getPalette(inCtx.getImageData(0, 0, 200, 200).data, 8);
+        var palette = getPalette(inCtx.getImageData(0, 0, 200, 200).data, 10);
 
         var approxes = [];
 
