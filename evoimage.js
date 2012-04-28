@@ -1,6 +1,6 @@
 // functions for svg circle image approximation evolution
 
-var getPalette = function(imageData, numColors, colorContainer){
+var getPalette = function(imageData, numColors, colorTable){
 	var data = [];
 	for (var i=0; i<imageData.length/4; i=i+4){
 		data.push([imageData[i], imageData[i+1], imageData[i+2]]);
@@ -8,17 +8,33 @@ var getPalette = function(imageData, numColors, colorContainer){
 	var clusters = figue.kmeans(numColors, data);
 	//console.log('using palette:', clusters.centroids);
 	palette = [];
-	for (var i=0; i<numColors; i++){
-		palette.push([Math.floor(clusters.centroids[i][0]),
-				Math.floor(clusters.centroids[i][1]),
-				Math.floor(clusters.centroids[i][2])
-				]);
-		var c = document.createElement('h3');
-		c.bgcolor = '#'+numToHex(palette[i][0])+numToHex(palette[i][1])+numToHex(palette[i][2]);
-		c.style.color = '#'+numToHex(palette[i][0])+numToHex(palette[i][1])+numToHex(palette[i][2]);
-		c.innerHTML = c.bgcolor;
-		c.id = 'paletteColor'+i;
-		colorContainer.appendChild(c);
+	var rowLength = Math.ceil(Math.sqrt(numColors));
+	var numRows = Math.ceil(numColors / rowLength);
+	for (var row=0; row<numRows; row++){
+		var curRow = document.createElement('tr');
+		for (var j=0; j<rowLength; j++){
+			var i = row * rowLength + j;
+			if (i == numColors){break;}
+			console.log('clusters', clusters);
+			console.log('row', row)
+			console.log('j', j)
+			console.log('i', i);
+			palette.push([Math.floor(clusters.centroids[i][0]),
+					Math.floor(clusters.centroids[i][1]),
+					Math.floor(clusters.centroids[i][2])
+					]);
+			var c = document.createElement('td');
+			curRow.appendChild(c);
+			s = '#'+numToHex(palette[i][0])+numToHex(palette[i][1])+numToHex(palette[i][2]);
+			sum = palette[i][0]+palette[i][1]+palette[i][2];
+			foreground = sum < 400 ? '#ffffff' : '#000000';
+			c.style['background-color'] = s;
+			c.innerText = s;
+			c.style.color = foreground;
+			//c.style['backgroud-color'] = c.style.color = c.innerText = s;
+			c.id = 'paletteColor'+i;
+		}
+		colorTable.appendChild(curRow);
 	}
 	return palette;
 }
@@ -37,8 +53,13 @@ var Approx = function(label, whereToInsert, inputCanvas){
 	this.container = document.createElement('span');
 	this.container.className = "approx";
 
-	this.textSpan = document.createElement('span');
-	this.container.appendChild(this.textSpan);
+	this.statusDiv = document.createElement('div');
+	this.statusDiv.className = 'statusDiv';
+	this.container.appendChild(this.statusDiv);
+
+	this.textSpan = document.createElement('div');
+	this.textSpan.className = 'textSpan';
+	this.statusDiv.appendChild(this.textSpan);
 
 	this.label = document.createElement('p');
 	this.label.innerHTML = label;
@@ -56,17 +77,49 @@ var Approx = function(label, whereToInsert, inputCanvas){
 	this.textSpan.appendChild(this.fitness);
 
 	this.graphCanvas = document.createElement('canvas');
-	this.graphCanvas.setAttribute('width', 150);
+	this.graphCanvas.setAttribute('width', inputCanvas.width*2);
 	this.graphCanvas.setAttribute('height', 100);
 	this.graphCanvas.className = "graphCanvas";
 	this.graphCanvas.setAttribute('position', "relative");
-	this.textSpan.appendChild(this.graphCanvas);
+	this.graphCanvas.hidden = true;
+	this.statusDiv.appendChild(this.graphCanvas);
 
 	this.iterImproveButton = document.createElement('button');
-	this.iterImproveButton.innerHTML = 'iteratively improve';
+	this.iterImproveButton.innerHTML = 'short';
 	this.iterImproveButton.addEventListener('click', function(){self.circlify(50)});
 	this.iterImproveButton.className = "iterImproveButton";
-	this.container.appendChild(this.iterImproveButton);
+	this.textSpan.appendChild(this.iterImproveButton);
+
+	this.manyIterImproveButton = document.createElement('button');
+	this.manyIterImproveButton.innerHTML = 'long';
+	this.manyIterImproveButton.addEventListener('click', function(){self.circlify(1000)});
+	this.manyIterImproveButton.className = "manyIterImproveButton";
+	this.textSpan.appendChild(this.manyIterImproveButton);
+
+	this.showGraphButton = document.createElement('button');
+	this.showGraphButton.innerHTML = 'graph';
+	this.showGraphButton.addEventListener('click', function(){
+		if (self.graphCanvas.hidden == true){
+			self.graphCanvas.hidden = false;
+		} else {
+			self.graphCanvas.hidden = true;
+		}
+	});
+	this.showGraphButton.className = "showGraphButton";
+	this.textSpan.appendChild(this.showGraphButton);
+
+	this.svgLink = document.createElement('a');
+	this.svgLink.innerHTML = 'svg xml';
+	this.svgLink.addEventListener('click', function(){
+		//alert(self.getSVG());
+		var s = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+		s += 'width="'+inputCanvas.width+'" height="'+inputCanvas.height+'" viewBox="0 0 '+inputCanvas.width+' '+inputCanvas.height+'"> '
+		s += self.getSVG().slice(5);
+		this.href = s;
+		this.target = "_blank";
+	});
+	this.svgLink.className = "svgLink";
+	this.textSpan.appendChild(this.svgLink);
 
 	this.costCanvas = document.createElement('canvas');
 	this.costCanvas.setAttribute('width', inputCanvas.width);
@@ -88,6 +141,7 @@ var Approx = function(label, whereToInsert, inputCanvas){
 	this.graphCtx = this.graphCanvas.getContext('2d');
 	this.worst = this.lowest = this.getFitness();
 	this.count = 0;
+
 };
 
 Approx.prototype = {
@@ -111,10 +165,7 @@ Approx.prototype = {
 		this.costCtx.putImageData(costMap, 0, 0);
 		return totalsum;
 	},
-	updateScreen : function(){
-		this.ctx.clearRect(0, 0, this.displayCanvas.width, this.displayCanvas.height);
-		// TODO make z-ordering work
-		//var sorted = [];
+	getSVG : function(){
 		var s = '<svg>';
 		for (var j=0; j<10; j++){
 			for (var i=0; i<this.splotches.length; i++){
@@ -124,9 +175,14 @@ Approx.prototype = {
 			}
 		}
 		s+= '</svg>';
+        return s;
+	},
+	updateScreen : function(){
+		this.ctx.clearRect(0, 0, this.displayCanvas.width, this.displayCanvas.height);
+		s = this.getSVG();
 		this.ctx.drawSvg(s);
 		f = this.getFitness();
-		var x = this.count/20;
+		var x = this.count/5;
 		var y = f / this.worst * 100;
 		this.count++;
 		this.graphCtx.fillRect(x, y, 1, 1);
@@ -323,14 +379,25 @@ Splotch.prototype = {
 		//console.log('mutated alpha to '+this.alpha);
 	}
 };
-var sexuallyReproduce = function(){
-	var numDescendants = 10;
+var sexuallyReproduce = function(approxes, whereToInsert, name, numDescendents, palette){
 	var splotches = [];
 	for (var i = 0; i < approxes.length; i++){
-		splotches = splotches.concat(approxes.splotches);
+		splotches = splotches.concat(approxes[i].splotches);
 	}
 	var aveCircles = Math.ceil(splotches.length / approxes.length);
-	for (var i = 0; i < numDescendants; i++){
-
+	for (var i = 0; i < numDescendents; i++){
+		approxes.push(a = new Approx('organism '+name+'_'+i++, whereToInsert, inCanvas));
+		for (var j = 0; j < aveCircles; j++){
+			var orig_index = Math.floor(Math.random()*splotches.length);
+			var original = splotches[orig_index];
+			s = new Splotch(approxes[0].inputCanvas.width, approxes[0].inputCanvas.height, palette);
+			s.color = original.color.slice(0);
+			s.position = original.position.slice(0);
+			s.radius = original.radius;
+			s.zindex = original.zindex;
+			s.alpha = original.alpha;
+			a.splotches.push(s);
+		}
+		a.updateScreen();
 	}
 };

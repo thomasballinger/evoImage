@@ -7,5 +7,27 @@ h3 {
         Times, serif;
     }
 div {
-    border: 3px solid #101010;
+    border: 0px solid #101010;
 }
+span {
+    border: 0px solid #101010;
+}
+p {
+	margin: 0em;
+	color: #222222
+}
+.approx {}
+#palette { float: left; display: block; }
+#inCanvas { float: left; 
+    border: 0px solid #101010;
+}
+#inputDiv { 
+	min-height: 300px;
+	min-width: 300px;
+}
+.approx { 
+	float: left;
+    color: #e9e2ee;
+}
+.statusDiv {}
+.graphCanvas {}
