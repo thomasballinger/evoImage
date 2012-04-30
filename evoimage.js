@@ -257,7 +257,7 @@ var Splotch = function(width, height, palette){
 		Math.floor(Math.random()*(this.maxPositions[0] - this.minPositions[0]) + this.minPositions[0]),
 		Math.floor(Math.random()*(this.maxPositions[1] - this.minPositions[1]) + this.minPositions[1]),
 		]
-	this.radius = Math.random()*(this.maxRadius - this.minRadius)+this.minRadius;
+	this.radius = Math.ceil(Math.random()*(this.maxRadius - this.minRadius)+this.minRadius);
 	this.zindex = Math.floor(Math.random()*10);
 	this.alpha = 1;
 	this.chanceToMutateColor = .2;
@@ -365,7 +365,7 @@ Splotch.prototype = {
 		//console.log('mutated pos to ' + this.position[0] +' '+ this.position[1]);
 	},
 	mutateRadius : function(){
-		this.radius = Math.max(this.minRadius, Math.min(this.maxRadius, this.radius + (1 - 2*Math.random())*this.rangeToMutateRadius));
+		this.radius = Math.ceil(Math.max(this.minRadius, Math.min(this.maxRadius, this.radius + (1 - 2*Math.random())*this.rangeToMutateRadius)));
 		//console.log('mutated radius to '+this.radius);
 	},
 	mutateZ : function(){
@@ -380,13 +380,16 @@ Splotch.prototype = {
 	}
 };
 var sexuallyReproduce = function(approxes, whereToInsert, name, numDescendents, palette){
+    var genDiv = document.createElement('div');
+    genDiv.className = "approxesDiv";
+    whereToInsert.parentElement.appendChild(genDiv);
 	var splotches = [];
 	for (var i = 0; i < approxes.length; i++){
 		splotches = splotches.concat(approxes[i].splotches);
 	}
 	var aveCircles = Math.ceil(splotches.length / approxes.length);
 	for (var i = 0; i < numDescendents; i++){
-		approxes.push(a = new Approx('organism '+name+'_'+i++, whereToInsert, inCanvas));
+		approxes.push(a = new Approx('organism '+name+'_'+i, genDiv, inCanvas));
 		for (var j = 0; j < aveCircles; j++){
 			var orig_index = Math.floor(Math.random()*splotches.length);
 			var original = splotches[orig_index];

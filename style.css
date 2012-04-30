@@ -6,17 +6,18 @@ h3 {
     font-family: Georgia, "Times New Roman",
         Times, serif;
     }
-div {
-    border: 0px solid #101010;
-}
-span {
-    border: 0px solid #101010;
-}
+/* for visualizing divs
+span { border: 1px solid #101010; }
+div { border: 1px solid #101010; }
+*/
 p {
+	padding-left: 5px;
 	margin: 0em;
-	color: #222222
+	color: #010101
 }
-.approx {}
+a {
+	color: #010101
+}
 #palette { float: left; display: block; }
 #inCanvas { float: left; 
     border: 0px solid #101010;
@@ -28,6 +29,10 @@ p {
 .approx { 
 	float: left;
     color: #e9e2ee;
+	border: 1px solid #111111;
+}
+.approxesDiv {
+	overflow: auto;
 }
 .statusDiv {}
 .graphCanvas {}

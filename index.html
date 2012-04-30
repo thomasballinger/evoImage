@@ -32,7 +32,6 @@
         var colorContainer = document.getElementById('palette');
         var srcImage = document.getElementById("sourceImage");
         var inCanvas = document.getElementById('inCanvas');
-        var fitnessDisplay = document.getElementById('fitnessDisplay');
         var approxesDiv = document.getElementById('approxesDiv');
         var inputDiv = document.getElementById('inputDiv');
         inCtx = inCanvas.getContext('2d');
@@ -52,10 +51,7 @@
         });
         sexButton = document.getElementById('sex');
         sexButton.addEventListener('click', function(){
-            var genDiv = document.createElement('div');
-            approxesDiv.parentElement.parentElement.appendChild(genDiv);
-            sexuallyReproduce(approxes, genDiv, 'g2', 10, palette);
-            ;
+            sexuallyReproduce(approxes, approxesDiv, 'g2', 4, palette);
         });
     }
 </script>
