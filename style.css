@@ -6,8 +6,10 @@ h3 {
     font-family: Georgia, "Times New Roman",
         Times, serif;
     }
+/* for debugging divs
 span { border: 1px solid #101010; }
 div { border: 1px solid #101010; }
+*/
 p {
 	padding-left: 5px;
 	margin: 0em;

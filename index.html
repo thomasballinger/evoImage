@@ -5,9 +5,9 @@
 </head>
 <body>
     <h3>evoImage</h3>
-<img id=sourceImage src="./obama-small.jpg" hidden=True />
+<img id=sourceImage src="./mona.jpg" hidden=True />
 <div id="inputDiv">
-    <canvas id="inCanvas" width="50" height="60">
+    <canvas id="inCanvas" width="300" height="300">
     </canvas>
     <table id='palette'>
         <tr> 
@@ -58,8 +58,9 @@
 
         sexButton = document.getElementById('sex');
         sexButton.addEventListener('click', function(){
-            sexuallyReproduce(approxes, approxesDiv, 'g2', 4, palette);
+            sexuallyReproduce(approxes, approxesContainer, 'g2', 4, palette);
         });
+
     }
 </script>
 

@@ -83,17 +83,25 @@ var Approx = function(label, whereToInsert, inputCanvas){
 	this.graphCanvas.hidden = true;
 	this.statusDiv.appendChild(this.graphCanvas);
 
+    /*
 	this.iterImproveButton = document.createElement('button');
-	this.iterImproveButton.innerHTML = 'short';
+	this.iterImproveButton.innerHTML = '50';
 	this.iterImproveButton.addEventListener('click', function(){self.circlify(50)});
 	this.iterImproveButton.className = "iterImproveButton";
 	this.textSpan.appendChild(this.iterImproveButton);
 
 	this.manyIterImproveButton = document.createElement('button');
-	this.manyIterImproveButton.innerHTML = 'long';
+	this.manyIterImproveButton.innerHTML = '1000';
 	this.manyIterImproveButton.addEventListener('click', function(){self.circlify(1000)});
 	this.manyIterImproveButton.className = "manyIterImproveButton";
 	this.textSpan.appendChild(this.manyIterImproveButton);
+    */
+
+	this.interactiveImproveButton = document.createElement('button');
+	this.interactiveImproveButton.innerHTML = 'start';
+	this.interactiveImproveButton.addEventListener('click', function(){self.toggleInteractiveCirclify(10,30)});
+	this.interactiveImproveButton.className = "interactiveImproveButton";
+	this.textSpan.appendChild(this.interactiveImproveButton);
 
 	this.showGraphButton = document.createElement('button');
 	this.showGraphButton.innerHTML = 'graph';
@@ -108,7 +116,7 @@ var Approx = function(label, whereToInsert, inputCanvas){
 	this.textSpan.appendChild(this.showGraphButton);
 
 	this.svgLink = document.createElement('a');
-	this.svgLink.innerHTML = 'svg xml';
+	this.svgLink.innerHTML = 'xml';
 	this.svgLink.addEventListener('click', function(){
 		//alert(self.getSVG());
 		var s = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
@@ -140,6 +148,7 @@ var Approx = function(label, whereToInsert, inputCanvas){
 	this.graphCtx = this.graphCanvas.getContext('2d');
 	this.worst = this.lowest = this.getFitness();
 	this.count = 0;
+    this.interactiveNowRunning = false;
 
 };
 
@@ -182,7 +191,7 @@ Approx.prototype = {
 		s = this.getSVG();
 		this.ctx.drawSvg(s);
 		f = this.getFitness();
-		var x = this.count/5;
+		var x = this.count/40;
 		var y = f / this.worst * 100;
 		this.count++;
 		this.graphCtx.fillRect(x, y, 1, 1);
@@ -232,6 +241,28 @@ Approx.prototype = {
 			this.splotches = this.splotches.slice(0,this.splotches.length-1);
 		}
 	},
+    toggleInteractiveCirclify : function(n, interval){
+        var self = this;
+        if (this.interactiveNowRunning){
+            this.interactiveNowRunning = false;
+            this.interactiveImproveButton.innerHTML = 'start';
+        } else {
+            this.interactiveNowRunning = true;
+            this.interactiveImproveButton.innerHTML = 'stop';
+            setTimeout(
+                    function(){self.interactiveCirclify(n, interval)},
+                    interval);
+        }
+    },
+    interactiveCirclify : function(n, interval){
+        var self = this;
+        this.circlify(n);
+        if (this.interactiveNowRunning){
+            setTimeout(
+                    function(){self.interactiveCirclify(n, interval);},
+                    interval);
+        }
+    },
 	circlify : function(n){
 		for (var i=0; i<n; i++){
 			if (Math.random() < 1){
