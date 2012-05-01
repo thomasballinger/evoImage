@@ -5,9 +5,9 @@
 </head>
 <body>
     <h3>evoImage</h3>
-<img id=sourceImage src="./obama.jpg" hidden=True />
+<img id=sourceImage src="./obama-small.jpg" hidden=True />
 <div id="inputDiv">
-    <canvas id="inCanvas" width="100" height="100">
+    <canvas id="inCanvas" width="50" height="60">
     </canvas>
     <table id='palette'>
         <tr> 
@@ -19,7 +19,7 @@
         <button id='sex'>Sexually Reproduce</button>
     </span>
 </div>
-<div class="approxesDiv" id="approxesDiv">
+<div id="genContainer">
 </div>
 
 <script type="text/javascript" src="rgbcolor.js"></script> 
@@ -28,27 +28,34 @@
 <script type="text/javascript" src="evoimage.js"></script> 
 <script type="text/javascript">
     window.onload = function(){
-        var counter = 0;
         var colorContainer = document.getElementById('palette');
         var srcImage = document.getElementById("sourceImage");
         var inCanvas = document.getElementById('inCanvas');
-        var approxesDiv = document.getElementById('approxesDiv');
+        var genContainer = document.getElementById('genContainer');
         var inputDiv = document.getElementById('inputDiv');
         inCtx = inCanvas.getContext('2d');
         inCtx.drawImage(sourceImage, 0, 0);
         inputDiv.style['min-height'] = inCanvas.height+"px";
         console.log(inCanvas.height);
+
+		// get number of colors to use in pallete from url hash
         var hash = window.location.hash;
         var n = parseInt(hash.slice(1))
         if (isNaN(n)){n = 4;}
         var palette = getPalette(inCtx.getImageData(0, 0, 200, 200).data, n, colorContainer);
 
+        var counter = 0;
         var approxes = [];
+
+		approxesContainer = document.createElement('div')
+		approxesContainer.className = 'approxesDiv';
+		genContainer.appendChild(approxesContainer);
 
         addApproxButton = document.getElementById('addApprox');
         addApproxButton.addEventListener('click', function(){
-            approxes.push(new Approx('organism '+counter++, approxesDiv, inCanvas))
+            approxes.push(new Approx('organism '+counter++, approxesContainer, inCanvas))
         });
+
         sexButton = document.getElementById('sex');
         sexButton.addEventListener('click', function(){
             sexuallyReproduce(approxes, approxesDiv, 'g2', 4, palette);

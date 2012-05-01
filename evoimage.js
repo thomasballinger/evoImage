@@ -6,7 +6,6 @@ var getPalette = function(imageData, numColors, colorTable){
 		data.push([imageData[i], imageData[i+1], imageData[i+2]]);
 	}
 	var clusters = figue.kmeans(numColors, data);
-	//console.log('using palette:', clusters.centroids);
 	palette = [];
 	var rowLength = Math.ceil(Math.sqrt(numColors));
 	var numRows = Math.ceil(numColors / rowLength);
@@ -165,6 +164,7 @@ Approx.prototype = {
 		this.costCtx.putImageData(costMap, 0, 0);
 		return totalsum;
 	},
+
 	getSVG : function(){
 		var s = '<svg>';
 		for (var j=0; j<10; j++){
